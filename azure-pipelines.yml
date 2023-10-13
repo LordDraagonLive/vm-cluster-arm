@@ -1,0 +1,35 @@
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+- stage: Validate
+  jobs:
+  - job: TerraformValidate
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformInstaller@0
+      inputs:
+        terraformVersion: '1.1.0' # Change to your Terraform version
+    - script: terraform init
+      displayName: 'Terraform Init'
+    - script: terraform validate
+      displayName: 'Terraform Validate'
+
+- stage: Apply
+  jobs:
+  - job: TerraformApply
+    steps:
+    - task: ms-devlabs.custom-terraform-tasks.custom-terraform-release-task.TerraformInstaller@0
+      inputs:
+        terraformVersion: '1.1.0'
+    - script: terraform init
+      displayName: 'Terraform Init'
+    - script: terraform apply -auto-approve
+      displayName: 'Terraform Apply'
+      env:
+        ARM_CLIENT_ID: $(servicePrincipalId)
+        ARM_CLIENT_SECRET: $(servicePrincipalKey)
+        ARM_SUBSCRIPTION_ID: $(subscriptionId)
+        ARM_TENANT_ID: $(tenantId)
