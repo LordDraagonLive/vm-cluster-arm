@@ -1,0 +1,234 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "vmName": {
+      "defaultValue": "slcdf-sap-vm",
+      "type": "String"
+    },
+    "adminUsername": {
+      "defaultValue": "slcdf-admin",
+      "type": "String"
+    },
+    "adminPassword": {
+      "defaultValue": "test",
+      "type": "SecureString"
+    },
+    "windowsVersion": {
+      "defaultValue": "2019-Datacenter",
+      "type": "String"
+    }
+  },
+  "resources": [
+    // Network Security Group
+    {
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "apiVersion": "2019-11-01",
+      "name": "slcdf-sap-nsg",
+      "location": "Southeast Asia",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "allowRDP",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "allowSSH",
+            "properties": {
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "22",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 110,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    // Virtual Network
+    {
+      "type": "Microsoft.Network/virtualNetworks",
+      "apiVersion": "2019-11-01",
+      "name": "slcdf-sap-vnet",
+      "location": "Southeast Asia",
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [ "10.0.0.0/16" ]
+        },
+        "subnets": [
+          {
+            "name": "slcdf-sap-subnet",
+            "properties": {
+              "addressPrefix": "10.0.0.0/24",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', 'slcdf-sap-nsg')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    // Public IP
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "apiVersion": "2019-11-01",
+      "name": "slcdf-sap-publicip",
+      "location": "Southeast Asia",
+      "properties": {
+        "publicIPAllocationMethod": "Static",
+        "dnsSettings": {
+          "domainNameLabel": "slcdf-sap-server-vm"
+        }
+      }
+    },
+    // Network Interface
+    {
+      "type": "Microsoft.Network/networkInterfaces",
+      "apiVersion": "2019-11-01",
+      "name": "slcdf-sap-vm-nic",
+      "location": "Southeast Asia",
+      "dependsOn": [
+        "Microsoft.Network/virtualNetworks/slcdf-sap-vnet",
+        "Microsoft.Network/publicIPAddresses/slcdf-sap-publicip"
+      ],
+
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', 'slcdf-sap-vnet', 'slcdf-sap-subnet')]"
+              },
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIPAddresses', 'slcdf-sap-publicip')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    // Virtual Machine
+    {
+      "type": "Microsoft.Compute/virtualMachines",
+      "apiVersion": "2019-07-01",
+      "name": "[parameters('vmName')]",
+      "location": "Southeast Asia",
+      "dependsOn": [
+        "Microsoft.Network/networkInterfaces/slcdf-sap-vm-nic"
+      ],
+      "comments": "This VM should use a Reserved Instance for cost savings.",
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D4s_v4"
+        },
+        "osProfile": {
+          "computerName": "[parameters('vmName')]",
+          "adminUsername": "[parameters('adminUsername')]",
+          "adminPassword": "[parameters('adminPassword')]"
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "MicrosoftWindowsServer",
+            "offer": "WindowsServer",
+            "sku": "[parameters('windowsVersion')]",
+            "version": "latest"
+          },
+          "osDisk": {
+            "createOption": "FromImage",
+            "managedDisk": {
+              "storageAccountType": "Standard_LRS"
+            }
+          },
+          "dataDisks": [
+            {
+              "createOption": "Empty",
+              "lun": 0,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 1,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 2,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 3,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 4,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 5,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 6,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            },
+            {
+              "createOption": "Empty",
+              "lun": 7,
+              "diskSizeGB": 32, // Size for S4 disk
+              "managedDisk": {
+                "storageAccountType": "Standard_LRS"
+              }
+            }
+          ]
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces', 'slcdf-sap-vm-nic')]"
+            }
+          ]
+        }
+
+      }
+    }
+  ]
+}
